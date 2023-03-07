@@ -1,18 +1,26 @@
+import java.util.ArrayList;
+import java.util.Date;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.*;
+import java.util.Properties;
+import java.util.TimeZone;
+
+import static java.lang.Float.parseFloat;
 
 public class Formulario extends JFrame {
-    private JLabel userLabel, passwordLabel, hostLabel, portaLabel, databaseLabel, fileLabel;
+    private JLabel userLabel, passwordLabel, hostLabel, portaLabel, databaseLabel, fileLabel, processLabel;
     private JTextField userField, passwordField, hostField, portaField, databaseField, fileField;
     private JButton fileButton, processarButton;
-    private JProgressBar progressBar;
+    // private JProgressBar progressBar;
     String confini = "config.ini";
+    private Statement stmt = null;
+    private ResultSet rs = null;
+    private Date dataHoraAtual = new Date();
 
     public Formulario() {
         setTitle("Exportação Usuarios | marcio28costa@hotmail.com | v.1");
@@ -31,7 +39,7 @@ public class Formulario extends JFrame {
                 config = configReader.readConfig(configFile.getAbsolutePath());
             } else {
                 configFile.createNewFile();
-                 config = new Config("localhost", "3306", "mysql", "grants.sql" );
+                config = new Config("localhost", "3306", "mysql", "grants.sql");
                 configReader.writeConfig(configFile.getAbsolutePath(), config);
             }
 
@@ -46,6 +54,7 @@ public class Formulario extends JFrame {
 
         passwordLabel = new JLabel("Senha:");
         passwordField = new JTextField(10);
+        passwordField = new JPasswordField();
         panel.add(passwordLabel);
         panel.add(passwordField);
 
@@ -72,17 +81,23 @@ public class Formulario extends JFrame {
         fileField.setText(config.getFilename());
         fileButton = new JButton("Abrir Arquivo");
         fileButton.setEnabled(false);
+
         panel.add(fileLabel);
         JPanel filePanel = new JPanel(new BorderLayout());
         filePanel.add(fileField, BorderLayout.CENTER);
         filePanel.add(fileButton, BorderLayout.EAST);
         panel.add(filePanel);
 
+        processLabel = new JLabel(" ");
+        panel.add(processLabel);
+
+
         processarButton = new JButton("Processar");
-        progressBar = new JProgressBar();
-        progressBar.setStringPainted(true);
         panel.add(processarButton);
-        panel.add(progressBar);
+
+        // progressBar = new JProgressBar();
+        // progressBar.setStringPainted(true);
+        // panel.add(progressBar);
 
         add(panel, BorderLayout.CENTER);
 
@@ -94,25 +109,20 @@ public class Formulario extends JFrame {
                 String porta = portaField.getText();
                 String database = databaseField.getText();
                 String filename = fileField.getText();
-
+/*
                 progressBar.setValue(0);
-                progressBar.setMaximum(100);
                 progressBar.setString("Processando...");
 
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                     @Override
                     protected Void doInBackground() throws Exception {
                         try {
-                            Class.forName("com.mysql.cj.jdbc.Driver");
-                            Connection connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + porta + "/" + database, user, password);
+
                             for (int i = 0; i <= 100; i++) {
                                 Thread.sleep(50);
                                 progressBar.setValue(i);
                             }
-                            JOptionPane.showMessageDialog(Formulario.this, "Conexão bem-sucedida!");
-                            connection.close();
                         } catch (Exception ex) {
-                            JOptionPane.showMessageDialog(Formulario.this, "Erro ao conectar ao banco de dados: " + ex.getMessage());
                         }
                         return null;
                     }
@@ -124,40 +134,171 @@ public class Formulario extends JFrame {
                 };
 
                 worker.execute();
+*/
             }
         });
 
         fileButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JFileChooser chooser = new JFileChooser();
-                int returnVal = chooser.showOpenDialog(Formulario.this);
-                if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    fileField.setText(chooser.getSelectedFile().getName());
+                String fileName = fileField.getText();
+                String filePath = System.getProperty("user.dir") + "/" + fileName;
+                File file = new File(filePath);
+                if (!file.exists()) {
+                    JOptionPane.showMessageDialog(null, "Arquivo não existe: " + file, "Erro", JOptionPane.ERROR_MESSAGE);
+
+                } else {
+                    try {
+                        Desktop.getDesktop().open(file);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         });
 
+
         processarButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+                // progressBar.setValue(0);
+                // progressBar.setString("Processando...");
                 String user = userField.getText();
-                String password = passwordField.getText();
+                String password = new String(passwordField.getText());
                 String host = hostField.getText();
                 String porta = portaField.getText();
                 String database = databaseField.getText();
                 String filename = fileField.getText();
-
+                String versao = null;
+                Integer total = 0;
+                String url = "jdbc:mysql://" + host + ":" + porta + "/" + database + "?useLegacyDatetimeCode=false";
                 try {
+                    TimeZone timeZone = TimeZone.getTimeZone("America/Sao_Paulo");
+                    Properties props = new Properties();
+                    props.setProperty("user", user);
+                    props.setProperty("password", password);
+                    props.setProperty("serverTimezone", timeZone.getID());
                     Class.forName("com.mysql.cj.jdbc.Driver");
-                    Connection connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + porta + "/" + database, user, password);
-                    JOptionPane.showMessageDialog(Formulario.this, "Conexão bem-sucedida!");
-                    connection.close();
+                    Connection conn = DriverManager.getConnection(url, props);
+                    // JOptionPane.showMessageDialog(Formulario.this, "Conexão bem-sucedida!");
+
+                    File arquivo = new File(filename);
+                    if (arquivo.exists()) {
+                        arquivo.delete();
+                    }
+                    // Criar um objeto Statement para enviar instruções SQL para o banco de dados
+                    stmt = conn.createStatement();
+
+                    // Executar o SELECT e armazenar o resultado em um objeto ResultSet
+                    rs = stmt.executeQuery("SELECT VERSION()");
+
+                    // resultado versão
+                    if (rs.next()) {
+                        versao = rs.getString(1);
+                    }
+                    rs = stmt.executeQuery("select count(0) as total  FROM mysql.user WHERE user not in ('mysql.sys', 'mysql.session')");
+                    if (rs.next()) {
+                        total = rs.getInt(1);
+                    }
+                    // progressBar.setMaximum(total);
+
+                    FileWriter escritor = new FileWriter(arquivo, true);
+                    escritor.write("###### Autor: marcio28costa@hotmail.com | exportação de usúarios v.1 | Java 11 ########\n");
+                    escritor.write("###### host: " + host + " | porta: " + porta + " | versão : " + versao + " #########\n");
+                    escritor.write("###### Geração da consulta: " + dataHoraAtual.toString() + " ########\n");
+                    escritor.close();
+
+
+
+                    if ((versao.contains("MariaDB")) || ((parseFloat(versao.substring(0, 3))) <= 5.6)) {
+                        try {
+                            Processamento processamento = new Processamento();
+                            processamento.exibirCaixaProcessamento();
+
+                            ArrayList<String> result = new ArrayList<>();
+                            Statement stmt1 = conn.createStatement();
+                            ResultSet rs1 = stmt1.executeQuery("SELECT CONCAT('`', USER, '`@`', HOST, '`') AS user_host FROM mysql.user WHERE user not in ('mysql.sys', 'mysql.session')");
+                            while (rs1.next()) {
+                                String userHost = rs1.getString("user_host");
+                                PreparedStatement stmt2 = conn.prepareStatement("SHOW GRANTS FOR " + userHost);
+                                result.add("-- " + userHost + " --");
+                                ResultSet rs2 = stmt2.executeQuery();
+
+                                while (rs2.next()) {
+                                    result.add(rs2.getString(1) + ";");
+                                }
+                                rs2.close();
+                                stmt2.close();
+                            }
+                            rs1.close();
+                            stmt1.close();
+                            // gravação dos dados no arquivo
+                            escritor = new FileWriter(arquivo, true);
+                            for (String line : result) {
+                                escritor.write(line + "\n");
+                            }
+                            escritor.write("-- exportação feita com sucesso -- ");
+                            escritor.close();
+                            processamento.getJframeProcessamento().dispose();
+                        } catch (SQLException e1) {
+                            System.out.println("Erro ao executar consulta: " + e1.getMessage());
+                        } catch (IOException e1) {
+                            System.out.println("Erro ao gravar dados no arquivo: " + e1.getMessage());
+                        }
+                    } else {
+                        try {
+                            Processamento processamento = new Processamento();
+                            processamento.exibirCaixaProcessamento();
+                            ArrayList<String> result = new ArrayList<>();
+                            Statement stmt1 = conn.createStatement();
+                            ResultSet rs1 = stmt1.executeQuery("SELECT CONCAT('`', USER, '`@`', HOST, '`') AS user_host FROM mysql.user WHERE user not in ('mysql.sys', 'mysql.session')");
+                            while (rs1.next()) {
+                                String userHost = rs1.getString("user_host");
+                                PreparedStatement stmt2 = conn.prepareStatement("SHOW CREATE USER " + userHost);
+                                result.add("-- " + userHost + " --");
+                                ResultSet rs2 = stmt2.executeQuery();
+
+                                while (rs2.next()) {
+                                    result.add(rs2.getString(1) + ";");
+                                    PreparedStatement stmt3 = conn.prepareStatement("SHOW GRANTS FOR " + userHost);
+                                    ResultSet rs3 = stmt3.executeQuery();
+                                    while (rs3.next()) {
+                                        result.add(rs3.getString(1) + ";");
+                                    }
+                                }
+                                rs2.close();
+                                stmt2.close();
+                            }
+                            rs1.close();
+                            stmt1.close();
+
+                            // gravação dos dados no arquivo
+                            escritor = new FileWriter(arquivo, true);
+                            for (String line : result) {
+                                escritor.write(line + "\n");
+                            }
+                            escritor.write("-- exportação feita com sucesso -- ");
+                            escritor.close();
+                            processamento.getJframeProcessamento().dispose();
+                        } catch (SQLException e1) {
+                            System.out.println("Erro ao executar consulta: " + e1.getMessage());
+                        } catch (IOException e1) {
+                            System.out.println("Erro ao gravar dados no arquivo: " + e1.getMessage());
+                        }
+
+                    }
+                    fileButton.setEnabled(true);
+                    conn.close();
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(Formulario.this, "Erro ao conectar ao banco de dados: " + ex.getMessage());
                 }
+
             }
+
         });
     }
- //public static void main(String[] args) {
+
+
+
+//   public static void main(String[] args) {
 //        Formulario form = new Formulario();
 //        form.setVisible(true);
 //    }

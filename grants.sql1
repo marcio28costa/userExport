@@ -1,0 +1,19 @@
+###### Autor: marcio28costa@hotmail.com | exportação de usúarios v.1 | Java 11 ########
+###### host: localhost | porta: 3306 | versão : 10.4.10-MariaDB #########
+###### Geração da consulta: Sat Mar 04 20:46:34 BRT 2023 ########
+-- `marcio`@`%` --
+GRANT ALL PRIVILEGES ON *.* TO 'marcio'@'%' IDENTIFIED BY PASSWORD '*495D2939D3D3FFE62C19FC84D44F0AF190D27192';
+-- `marcio`@`127.0.0.1` --
+GRANT ALL PRIVILEGES ON *.* TO 'marcio'@'127.0.0.1' IDENTIFIED BY PASSWORD '*495D2939D3D3FFE62C19FC84D44F0AF190D27192';
+-- `root`@`127.0.0.1` --
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;
+-- `root`@`::1` --
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'::1' WITH GRANT OPTION;
+-- `root`@`desktop-qongiu3` --
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'desktop-qongiu3' WITH GRANT OPTION;
+GRANT PROXY ON ''@'%' TO 'root'@'desktop-qongiu3' WITH GRANT OPTION;
+-- `marcio`@`localhost` --
+GRANT ALL PRIVILEGES ON *.* TO 'marcio'@'localhost' IDENTIFIED BY PASSWORD '*495D2939D3D3FFE62C19FC84D44F0AF190D27192';
+-- `root`@`localhost` --
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+GRANT PROXY ON ''@'%' TO 'root'@'localhost' WITH GRANT OPTION;
